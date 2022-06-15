@@ -1,0 +1,5 @@
+#!/bin/bash
+
+unset NEW_PREFIX
+unset NEUSOMATIC_MODELS
+unset NEUSOMATIC_SCRIPTS
