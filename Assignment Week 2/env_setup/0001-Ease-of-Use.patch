@@ -1,0 +1,722 @@
+From fb5144b4b7a6f3cd6d57934df30ac6d69183b463 Mon Sep 17 00:00:00 2001
+From: rekm <r.w.kmiecinski@gmail.com>
+Date: Mon, 4 May 2020 12:23:22 +0200
+Subject: [PATCH] Ease of Use
+
+Combine Nearby Interactions:
+
+        Added ability to deal with whitespaces in filenames
+        quoted file strings
+
+Hickry.py
+
+        Added Shbang
+
+merge-filter & merge-filter-paralellized
+
+        Quoted Variables that deal with filenames
+        Again fixing whitespaces in filenames
+---
+ fithic/utils/CombineNearbyInteraction.py      | 111 +++++++-------
+ fithic/utils/HiCKRy.py                        |   3 +-
+ fithic/utils/HiCPro2FitHiC.py                 |   0
+ fithic/utils/createFitHiCContacts-hic.sh      |   0
+ .../utils/createFitHiCFragments-fixedsize.py  |   0
+ .../createFitHiCFragments-nonfixedsize.sh     |   0
+ fithic/utils/createFitHiCHTMLout.sh           | 138 +++++++++---------
+ fithic/utils/merge-filter-parallelized.sh     |  24 +--
+ fithic/utils/merge-filter.sh                  |  16 +-
+ fithic/utils/visualize-UCSC.sh                |   0
+ 10 files changed, 152 insertions(+), 140 deletions(-)
+ mode change 100644 => 100755 fithic/utils/CombineNearbyInteraction.py
+ mode change 100644 => 100755 fithic/utils/HiCKRy.py
+ mode change 100644 => 100755 fithic/utils/HiCPro2FitHiC.py
+ mode change 100644 => 100755 fithic/utils/createFitHiCContacts-hic.sh
+ mode change 100644 => 100755 fithic/utils/createFitHiCFragments-fixedsize.py
+ mode change 100644 => 100755 fithic/utils/createFitHiCFragments-nonfixedsize.sh
+ mode change 100644 => 100755 fithic/utils/createFitHiCHTMLout.sh
+ mode change 100644 => 100755 fithic/utils/merge-filter-parallelized.sh
+ mode change 100644 => 100755 fithic/utils/merge-filter.sh
+ mode change 100644 => 100755 fithic/utils/visualize-UCSC.sh
+
+diff --git a/fithic/utils/CombineNearbyInteraction.py b/fithic/utils/CombineNearbyInteraction.py
+old mode 100644
+new mode 100755
+index d30d7a9..b79edc5
+--- a/fithic/utils/CombineNearbyInteraction.py
++++ b/fithic/utils/CombineNearbyInteraction.py
+@@ -30,7 +30,7 @@ import gzip
+ import heapq
+ 
+ #==========================================================
+-# this function returns the element below which top K % of 
++# this function returns the element below which top K % of
+ # all the elements reside
+ # lst: input list, K: top K percent
+ # order: 1 means increasing order sort, 2 means reverse order sort
+@@ -41,7 +41,7 @@ def custom_percent(lst, K, order=1):
+         sortedLst = sorted(lst, reverse=True)
+     lstLen = len(lst)
+     index = int(((len(lst) * K) / 100))
+-    # for very small list, return the minimum 
++    # for very small list, return the minimum
+     if (index <= 1):
+         # return ((sum(sortedLst) * 1.0) / len(sortedLst))
+         if (order == 1):
+@@ -62,11 +62,11 @@ def custom_percent(lst, K, order=1):
+ #         return (sortedLst[index] + sortedLst[index + 1])/2.0
+ 
+ #==========================================================
+-""" 
++"""
+ this class defines a particular interaction
+ the key is (x,y) where x and y are the bin number (x < y)
+ """
+-class Interaction(object):  
++class Interaction(object):
+     def __init__(self, cc, pval, qval):
+         self.contact = cc
+         self.PValue = pval
+@@ -95,11 +95,11 @@ def parse_args(args):
+     # parser.add_argument("-q", "--qvalue_threshold", type=float, help="Q-value threshold to utilize for significant interactions. Default is 1e-5", default=(10**-5))
+ 
+     parser.add_argument("-p", "--percent", dest="TopPctElem", type=int, help="Percentage of elements to be selected from each connected component. Default: 100, means all loops would be considered. If specified as 0, only the most significant loops from each component would be selected. For any number x between 0 and 100, top x%% of the loops in a component, considering both statistical significance and contact count, would considered for inclusion, subject to the bin and neighborhood contraints.", default=100)
+-    
++
+     parser.add_argument("-n", "--Neigh", dest="NeighborHoodBin", type=int, help="Positive integer (default: 2 with 5 Kb bin size) means that if a loop is included in the final set, loops involving within 2x2 neighborhood of both the bins would be discarded. Applicable only if --percent > 0. Difference in bin size other than 5000 may prompt user to change this value.", default=2)
+-    
++
+     parser.add_argument("-s","--order", dest="SortOrder", type=int, help="Binary variable indicating the sorting order of the given significance values. Default 0, means sorting is done by ascending order. If specified 1, sorting is done by descending (reverse) order.", default=0)
+-    
++
+     #parser.add_argument("--cccol", dest="CCCol", type=int, help="Column number storing the contact count. Default: 7.", default=7)
+ 
+     #parser.add_argument("--qcol", dest="QValCol", type=int, help="Column number storing the q-value (or any measure of statistical significance). Default: 0, means the last column of the given interaction file. Any non-zero value would prompt the user to check the corresponding column.", default=0)
+@@ -125,7 +125,7 @@ def main():
+     else:
+         sys.exit("Output file is not specified - quit !!")
+ 
+-    # bin size of FitHiC loops - mandatory parameter 
++    # bin size of FitHiC loops - mandatory parameter
+     bin_size = int(options.resolution)
+ 
+     # presence of header in input file
+@@ -134,7 +134,7 @@ def main():
+     # q-value threshold for considering interactions for merging
+     # should not be used - sourya
+     # qvalue_threshold = float(options.qvalue_threshold)
+-    
++
+     connectivity_rule = int(options.connectivity_rule)
+     TopPctElem = int(options.TopPctElem)
+     NeighborHoodBinThr = (int(options.NeighborHoodBin)) * bin_size
+@@ -181,7 +181,7 @@ def main():
+         print('\n *** QValCol: ', QValCol)
+         print('\n *** PValCol: ', PValCol)
+         print('\n *** SortOrder: ', SortOrder)
+-    
++
+     # output directory
+     OutDir = os.path.dirname(os.path.realpath(OutFile))
+     if not os.path.exists(OutDir):
+@@ -198,18 +198,21 @@ def main():
+     print('temp_ChrName_File: ', str(temp_ChrName_File))
+     if (gzip_inp == 1):
+         if (headerInp == 1):
+-            currcmd = "zcat " + str(InpFile) + "| awk \'{if (NR>1) {print $1}}\' - | sort -k1,1 | uniq > " + str(temp_ChrName_File)
++            currcmd = "zcat \"" + str(InpFile) + "\" | awk \'{if (NR>1) {print $1}}\' - | sort -k1,1 | uniq > \"" + str(temp_ChrName_File) + "\""
+         else:
+-            currcmd = "zcat " + str(InpFile) + "| cut -f1 | sort -k1,1 | uniq > " + str(temp_ChrName_File)
++            currcmd = "zcat \"" + str(InpFile) + "\" | cut -f1 | sort -k1,1 | uniq > \"" + str(temp_ChrName_File)+ "\""
++
+     else:
+         if (headerInp == 1):
+-            currcmd = "cat " + str(InpFile) + "| awk \'{if (NR>1) {print $1}}\' - | sort -k1,1 | uniq > " + str(temp_ChrName_File)
++            currcmd = "cat \"" + str(InpFile) + "\" | awk \'{if (NR>1) {print $1}}\' - | sort -k1,1 | uniq > \"" + str(temp_ChrName_File) + "\""
++
+         else:
+-            currcmd = "cat " + str(InpFile) + "| cut -f1 | sort -k1,1 | uniq > " + str(temp_ChrName_File)
++            currcmd = "cat \"" + str(InpFile) + "\" | cut -f1 | sort -k1,1 | uniq > \"" + str(temp_ChrName_File) + "\""
++
+     os.system(currcmd)
+ 
+     #====================
+-    # now read the file containing the list of chromosomes 
++    # now read the file containing the list of chromosomes
+     # and store it in a structure
+     #====================
+     # list of chromosomes to be experimented
+@@ -219,11 +222,11 @@ def main():
+     #     TargetChrList.append(curr_chr)
+     # TargetChrList.append('chrX')
+     # TargetChrList.append('chrY')
+-    
++
+     chrp_in = open(temp_ChrName_File, 'r')
+     while True:
+         l = chrp_in.readline()
+-        if not l: 
++        if not l:
+             break
+         contents = l.rstrip().split()
+         TargetChrList.append(contents[0])
+@@ -261,14 +264,14 @@ def main():
+                 # awkcmd = "zcat " + str(InpFile) + " | awk \'{if (NR>1 && $1==\"" + str(curr_chr) + "\" && $3==\"" + str(curr_chr) + "\" && $7 <=" + str(qvalue_threshold) + "){print $0}}\' -  > " + str(tempchrdumpfile)
+                 # modification - sourya
+                 # just dump the significant loops for this chromosome
+-                awkcmd = "zcat " + str(InpFile) + " | awk \'{if (NR>1 && $1==\"" + str(curr_chr) + "\" && $3==\"" + str(curr_chr) + "\"){print $0}}\' -  > " + str(tempchrdumpfile)
++                awkcmd = "zcat " + str(InpFile) + " | awk \'{if (NR>1 && $1==\"" + str(curr_chr) + "\" && $3==\"" + str(curr_chr) + "\"){print $0}}\' -  > \"%s\"" % str(tempchrdumpfile)
+             else:
+-                awkcmd = "cat " + str(InpFile) + " | awk \'{if (NR>1 && $1==\"" + str(curr_chr) + "\" && $3==\"" + str(curr_chr) + "\"){print $0}}\' -  > " + str(tempchrdumpfile)
++                awkcmd = "cat " + str(InpFile) + " | awk \'{if (NR>1 && $1==\"" + str(curr_chr) + "\" && $3==\"" + str(curr_chr) + "\"){print $0}}\' -  > \"%s\"" % str(tempchrdumpfile)
+         else:
+             if (gzip_inp == 1):
+-                awkcmd = "zcat " + str(InpFile) + " | awk \'{if ($1==\"" + str(curr_chr) + "\" && $3==\"" + str(curr_chr) + "\"){print $0}}\' -  > " + str(tempchrdumpfile)
++                awkcmd = "zcat " + str(InpFile) + " | awk \'{if ($1==\"" + str(curr_chr) + "\" && $3==\"" + str(curr_chr) + "\"){print $0}}\' -  > \"%s\"" % str(tempchrdumpfile)
+             else:
+-                awkcmd = "cat " + str(InpFile) + " | awk \'{if ($1==\"" + str(curr_chr) + "\" && $3==\"" + str(curr_chr) + "\"){print $0}}\' -  > " + str(tempchrdumpfile)
++                awkcmd = "cat " + str(InpFile) + " | awk \'{if ($1==\"" + str(curr_chr) + "\" && $3==\"" + str(curr_chr) + "\"){print $0}}\' -  > \"%s\"" % str(tempchrdumpfile)
+ 
+         print(awkcmd)
+         os.system(awkcmd)
+@@ -294,7 +297,7 @@ def main():
+         # create a dictionary for storing the interactions
+         CurrChrDict = dict()
+ 
+-        # now scan through the interactions of the extracted chromosome 
++        # now scan through the interactions of the extracted chromosome
+         # and create a dictionary whose keys are the interacting bin numbers
+         with open(tempchrdumpfile, 'r') as fp:
+             for line in fp:
+@@ -388,7 +391,7 @@ def main():
+             if 1:
+                 print('span_low_bin2: ', span_low_bin2, ' span_high_bin2: ', span_high_bin2)
+ 
+-            # sum of contact counts for all the interacting bins 
++            # sum of contact counts for all the interacting bins
+             # within this set of connected nodes
+             sum_cc = sum([CurrChrDict[x]._GetCC() for x in curr_comp_list])
+ 
+@@ -401,7 +404,7 @@ def main():
+                     bin_pair_key = (b1, b2)
+                     if bin_pair_key in CurrChrDict:
+                         possible_bin_pairs = possible_bin_pairs + 1
+-            
++
+             # % of bin pairs within the region spanned by this connected component
+             # having significant interaction
+             # the higher the %, the better this component is strongly connected
+@@ -411,8 +414,8 @@ def main():
+                 print(' ==>>> total_possible_bin_pairs: ', total_possible_bin_pairs, ' possible_bin_pairs: ', possible_bin_pairs, ' % clique: ', Percent_Significant_BinPair)
+ 
+             #==================================================
+-            # approach 1 : 
+-            # if TopPctElem = 0 then 
++            # approach 1 :
++            # if TopPctElem = 0 then
+             # get the bin having maximum statistical significance and corresponding bin pairs
+             # ties are resolved by maximum contact count
+             # if SortOrder = 0, maximum statistical significance === min P and Q values
+@@ -425,14 +428,14 @@ def main():
+                     curr_cc = CurrChrDict[curr_key]._GetCC()
+                     curr_pval = CurrChrDict[curr_key]._GetPVal()
+                     curr_qval = CurrChrDict[curr_key]._GetQVal()
+-                    
++
+                     curr_key_bin1_mid = (((curr_key[0] - 1) * bin_size) + (curr_key[0] * bin_size)) / 2
+                     curr_key_bin2_mid = (((curr_key[1] - 1) * bin_size) + (curr_key[1] * bin_size)) / 2
+                     if 0:
+                         print(' Connected component index: ', j, ' curr_key: ', curr_key, ' bin 1 mid: ', curr_key_bin1_mid, ' bin 2 mid: ', curr_key_bin2_mid, ' CC: ', curr_cc, ' Pval: ', curr_pval, ' Qval: ', curr_qval)
+                     if (j == 0):
+                         # first index
+-                        rep_bin_key = curr_key                        
++                        rep_bin_key = curr_key
+                     elif (SortOrder == 0) and (curr_pval < CurrChrDict[rep_bin_key]._GetPVal()) and (curr_qval < CurrChrDict[rep_bin_key]._GetQVal()):
+                         # current element has higher statistical significance (lower P or Q value when SortOrder = 0)
+                         rep_bin_key = curr_key
+@@ -459,11 +462,11 @@ def main():
+                 # write the interaction in the specified output file
+                 #fp_outInt.write('\n' + str(curr_chr) + '\t' + str(rep_bin1_low) + '\t' + str(rep_bin1_high) + '\t' + str(curr_chr) + '\t' + str(rep_bin2_low) + '\t' + str(rep_bin2_high) + '\t' + str(cc) + '\t' + str(pval) + '\t' + str(qval) + '\t' + str(span_low_bin1) + '\t' + str(span_high_bin1) + '\t' + str(span_low_bin2) + '\t' + str(span_high_bin2) + '\t' + str(sum_cc) + '\t' + str(Percent_Significant_BinPair))
+                 fp_outInt.write('\n' + str(curr_chr) + '\t' + str((rep_bin1_low + rep_bin1_high)/2) + '\t' + str(curr_chr) + '\t' + str((rep_bin2_low + rep_bin2_high)/2) + '\t' + str(cc) + '\t' + str(pval) + '\t' + str(qval) + '\t' + str(span_low_bin1) + '\t' + str(span_high_bin1) + '\t' + str(span_low_bin2) + '\t' + str(span_high_bin2) + '\t' + str(sum_cc) + '\t' + str(Percent_Significant_BinPair))
+-            
++
+             #==================================================
+-            # approach 2: 
++            # approach 2:
+             # if TopPctElem > 0, and TopPctElem < 100
+-            # then get the top (TopPctElem %) elements from 
++            # then get the top (TopPctElem %) elements from
+             # each connected component, (P and Q values, contact counts)
+             # use these elements if they satisfy the bin neighborhood threshold
+             #==================================================
+@@ -487,11 +490,11 @@ def main():
+                     curr_conn_comp_QValList.append(curr_qval)
+ 
+                     # create a min-heap structure
+-                    # first element: q-value 
++                    # first element: q-value
+                     # if SortOrder = 0, lower: better: use the same sign when insering in the heap
+                     # if SortOrder = 1, higher: better: reverse the sign when insering in the heap
+                     # for ties, second element (contact count) - higher: better
+-                    # so, use negative signs 
++                    # so, use negative signs
+                     if (SortOrder == 0):
+                         subl = [curr_qval, ((-1) * curr_cc), curr_key[0], curr_key[1]]
+                     else:
+@@ -503,7 +506,7 @@ def main():
+                 # first get the maximum / minimum values from these lists
+                 max_cc = max(curr_conn_comp_CCList)
+                 min_qval = min(curr_conn_comp_QValList)
+-                
++
+                 # now obtain the values of top K % elements
+                 # from these lists
+                 # where K = 50 means it is median
+@@ -529,8 +532,8 @@ def main():
+                     # consider only those interactions
+                     # which have sufficient values of both contact count
+                     # and q-values
+-                    
+-                    # # terminating condition - do not consider elements 
++
++                    # # terminating condition - do not consider elements
+                     # # with lower log 10 Q values than the custom_logqval
+                     # if ((curr_elem[0] * (-1)) < custom_logqval):
+                     #     break
+@@ -540,13 +543,13 @@ def main():
+                     #     continue
+                     #===================================
+                     # modified condition - sourya
+-                    # consider those interactions having 
++                    # consider those interactions having
+                     # significance value > K percentile
+                     if ((SortOrder == 0) and (curr_elem[0] > custom_qval)) or ((SortOrder == 1) and (curr_elem[0] < custom_qval)):
+                         break
+                     #===================================
+ 
+-                    # if this is the first element 
++                    # if this is the first element
+                     # then insert they key in the candidate set of interactions
+                     if (len(Final_Rep_Key_List) == 0):
+                         subl = [curr_elem[2], curr_elem[3]]
+@@ -556,7 +559,7 @@ def main():
+                         continue
+ 
+                     # otherwise, check with the existing interactions
+-                    # and do not include if the bin falls within a certain 
++                    # and do not include if the bin falls within a certain
+                     # neighborhood of earlier included interactions
+                     # the neighborhood is already mentioned via command line parameters
+                     flag = False
+@@ -568,7 +571,7 @@ def main():
+                             if 0:
+                                 print(' --- current element is within neighborhood of the bins indexed by ', i, '  of Final_Rep_Key_List')
+                             break
+-                    
++
+                     if (flag == False):
+                         # there is no such neighborhood constraints
+                         # include the bin
+@@ -576,12 +579,12 @@ def main():
+                         Final_Rep_Key_List.append(subl)
+                         if 0:
+                             print('\t\t *** inserted element in the final list: ', str(subl), '  generated Final_Rep_Key_List: ', str(Final_Rep_Key_List))
+-                        
+-                # now print the candidate interactions 
++
++                # now print the candidate interactions
+                 # of the current component
+                 for i in range(len(Final_Rep_Key_List)):
+                     rep_bin_key = (Final_Rep_Key_List[i][0], Final_Rep_Key_List[i][1])
+-                
++
+                     # fix the representative interaction
+                     rep_bin1_low = (rep_bin_key[0] - 1) * bin_size
+                     rep_bin1_high = rep_bin_key[0] * bin_size
+@@ -593,13 +596,13 @@ def main():
+ 
+                     if 1:
+                         print('**** Selected bin key: ', rep_bin_key, ' start bin mid: ', (rep_bin1_low + rep_bin1_high)/2,  ' end bin mid: ', (rep_bin2_low + rep_bin2_high) / 2, ' cc: ', cc, ' pval: ', pval, ' qval: ', qval)
+-                    
++
+                     # write the interaction in the specified output file
+                     # fp_outInt.write('\n' + str(curr_chr) + '\t' + str(rep_bin1_low) + '\t' + str(rep_bin1_high) + '\t' + str(curr_chr) + '\t' + str(rep_bin2_low) + '\t' + str(rep_bin2_high) + '\t' + str(cc) + '\t' + str(pval) + '\t' + str(qval) + '\t' + str(span_low_bin1) + '\t' + str(span_high_bin1) + '\t' + str(span_low_bin2) + '\t' + str(span_high_bin2) + '\t' + str(sum_cc) + '\t' + str(Percent_Significant_BinPair))
+                     fp_outInt.write('\n' + str(curr_chr) + '\t' + str((rep_bin1_low + rep_bin1_high)/2) + '\t' + str(curr_chr) + '\t' + str((rep_bin2_low + rep_bin2_high)/2) + '\t' + str(cc) + '\t' + str(pval) + '\t' + str(qval) + '\t' + str(span_low_bin1) + '\t' + str(span_high_bin1) + '\t' + str(span_low_bin2) + '\t' + str(span_high_bin2) + '\t' + str(sum_cc) + '\t' + str(Percent_Significant_BinPair))
+ 
+             #==================================================
+-            # approach 3: 
++            # approach 3:
+             # if TopPctElem = 100 (latest implementation)
+             # then sequentially obtain the interactions with the lowest q-value
+             # and break the tie for the higher contact count
+@@ -610,7 +613,7 @@ def main():
+                 # list to store the q-values and the CC values for individual bin pairs
+                 # for their sequential extraction
+                 Curr_Comp_Tuple_List = []
+-                
++
+                 # lists storing different attributes
+                 curr_conn_comp_CCList = []
+                 curr_conn_comp_QValList = []
+@@ -624,16 +627,16 @@ def main():
+                     curr_conn_comp_QValList.append(curr_qval)
+ 
+                     # create a min-heap structure
+-                    # first element: q-value 
++                    # first element: q-value
+                     # if SortOrder = 0, lower: better: use the same sign when insering in the heap
+                     # if SortOrder = 1, higher: better: reverse the sign when insering in the heap
+                     # for ties, second element (contact count) - higher: better
+-                    # so, use negative signs 
++                    # so, use negative signs
+                     if (SortOrder == 0):
+                         subl = [curr_qval, ((-1) * curr_cc), curr_key[0], curr_key[1]]
+                     else:
+                         subl = [((-1) * curr_qval), ((-1) * curr_cc), curr_key[0], curr_key[1]]
+-              
++
+                     # insert the element in the designated queue (min-heap property)
+                     heapq.heappush(Curr_Comp_Tuple_List, subl)
+ 
+@@ -653,7 +656,7 @@ def main():
+                     if 0:
+                         print('extracted element from heap: ', curr_elem)
+ 
+-                    # if this is the first element 
++                    # if this is the first element
+                     # then insert they key in the candidate set of interactions
+                     if (len(Final_Rep_Key_List) == 0):
+                         subl = [curr_elem[2], curr_elem[3]]
+@@ -663,7 +666,7 @@ def main():
+                         continue
+ 
+                     # otherwise, check with the existing interactions
+-                    # and do not include if the bin falls within a certain 
++                    # and do not include if the bin falls within a certain
+                     # neighborhood of earlier included interactions
+                     # the neighborhood is already mentioned via command line parameters
+                     flag = False
+@@ -684,14 +687,14 @@ def main():
+                         if 0:
+                             print('*** inserted element in the final list: ', str(subl))
+ 
+-                # now print the candidate interactions 
++                # now print the candidate interactions
+                 # of the current component
+                 if 0:
+                     print('\n\n**** Printing selected loops of the connected component ***\n\n')
+ 
+                 for i in range(len(Final_Rep_Key_List)):
+                     rep_bin_key = (Final_Rep_Key_List[i][0], Final_Rep_Key_List[i][1])
+-                
++
+                     # fix the representative interaction
+                     rep_bin1_low = (rep_bin_key[0] - 1) * bin_size
+                     rep_bin1_high = rep_bin_key[0] * bin_size
+@@ -699,7 +702,7 @@ def main():
+                     rep_bin2_high = rep_bin_key[1] * bin_size
+                     cc = CurrChrDict[rep_bin_key]._GetCC()
+                     pval = CurrChrDict[rep_bin_key]._GetPVal()
+-                    qval = CurrChrDict[rep_bin_key]._GetQVal()                    
++                    qval = CurrChrDict[rep_bin_key]._GetQVal()
+                     if 1:
+                         print('Selected bin key: ', rep_bin_key, ' start bin mid: ', (rep_bin1_low + rep_bin1_high)/2,  ' end bin mid: ', (rep_bin2_low + rep_bin2_high) / 2, ' cc: ', cc, ' pval: ', pval, ' qval: ', qval)
+ 
+diff --git a/fithic/utils/HiCKRy.py b/fithic/utils/HiCKRy.py
+old mode 100644
+new mode 100755
+index b4c68ef..eeece83
+--- a/fithic/utils/HiCKRy.py
++++ b/fithic/utils/HiCKRy.py
+@@ -1,3 +1,4 @@
++#!/usr/bin/env python
+ import gzip
+ import argparse
+ import sys
+@@ -245,7 +246,7 @@ def checkBias(biasvec):
+     std = np.std(biasvec)
+     mean = np.mean(biasvec)
+     median = np.median(biasvec)
+-    if (mean < 0.5 or mean > 2): 
++    if (mean < 0.5 or mean > 2):
+         print("WARNING... Bias vector has a mean outside of typical range (0.5, 2).")
+         print("Consider running with a larger -x option if problems occur")
+         print("Mean\t%s" % mean)
+diff --git a/fithic/utils/HiCPro2FitHiC.py b/fithic/utils/HiCPro2FitHiC.py
+old mode 100644
+new mode 100755
+diff --git a/fithic/utils/createFitHiCContacts-hic.sh b/fithic/utils/createFitHiCContacts-hic.sh
+old mode 100644
+new mode 100755
+diff --git a/fithic/utils/createFitHiCFragments-fixedsize.py b/fithic/utils/createFitHiCFragments-fixedsize.py
+old mode 100644
+new mode 100755
+diff --git a/fithic/utils/createFitHiCFragments-nonfixedsize.sh b/fithic/utils/createFitHiCFragments-nonfixedsize.sh
+old mode 100644
+new mode 100755
+diff --git a/fithic/utils/createFitHiCHTMLout.sh b/fithic/utils/createFitHiCHTMLout.sh
+old mode 100644
+new mode 100755
+index 758fff2..5080a5c
+--- a/fithic/utils/createFitHiCHTMLout.sh
++++ b/fithic/utils/createFitHiCHTMLout.sh
+@@ -5,19 +5,19 @@
+ 
+ #DESCRIPTION:
+ #bash createFitHiCHTMLout.sh [Library Name] [No. of passes] [Fit-Hi-C output folder]
+-#        
++#
+ #        [Library Name]            The library name (-l option) used during Fit-Hi-C’s run
+ #        [No. of passes]            The number of spline passes conducted by the Fit-Hi-C run
+ #        [Fit-Hi-C output folder]    Path to the output folder for that Fit-Hi-C run (-o option)
+ 
+ 
+ 
+-libName=$1 # name of the library provided to fithic python script 
+-noOfPasses=$2 # assumes this is 1 unless otherwise specified
+-output=$3 #path to directory of output folder from Fit-Hi-C run
++libName="$1" # name of the library provided to fithic python script
++noOfPasses="$2" # assumes this is 1 unless otherwise specified
++output="$3" #path to directory of output folder from Fit-Hi-C run
+ 
+ resolution_used="NONE"
+-for i in $output/*fithic_pass*; do
++for i in "${output}"/*fithic_pass*; do
+     resolution_used=$(echo $i | awk -F [.] '{print $(NF-1)}')
+ done
+ 
+@@ -27,86 +27,86 @@ else
+     echo "No resolution used."
+ fi
+ 
+-html=$output/$libName.results.html
+-echo \<html\> > $html
+-echo \<head\>\<title\> Fit-Hi-C Report for $libName \</title\>\</head\> >>$html
+-echo \<body\> >> $html
+-echo \<center\>\<h1\>Fit-Hi-C Report for $libName \</h1\>\</center\>  >>$html
++html="${output}/${libName}.results.html"
++echo \<html\> > "$html"
++echo \<head\>\<title\> Fit-Hi-C Report for $libName \</title\>\</head\> >>"$html"
++echo \<body\> >> "$html"
++echo \<center\>\<h1\>Fit-Hi-C Report for $libName \</h1\>\</center\>  >>"$html"
+ 
+-echo \<p\> Displaying results of the Fit-Hi-C run for $libName.\</p\> >>$html
++echo \<p\> Displaying results of the Fit-Hi-C run for $libName.\</p\> >>"$html"
+ 
+ 
+-echo \<p\> For detailed log of the run please see this \<a href=$output/$libName.fithic.log\> log file\</a\> \</p\> >>$html
++echo \<p\> For detailed log of the run please see this \<a href="$output"/$libName.fithic.log\> log file\</a\> \</p\> >>"$html"
+ 
+ if [[ $resolution_used =~ .*res.* ]]; then
+-    echo \<p\> Final significance values \(p-values, q-values\) after specified number of refinement steps can be downloaded from \<a href=$output/$libName.spline_pass$noOfPasses.$resolution_used.significances.txt.gz\> this link\</a\> \</p\> >>$html
++    echo \<p\> Final significance values \(p-values, q-values\) after specified number of refinement steps can be downloaded from \<a href="$output/$libName.spline_pass$noOfPasses.$resolution_used.significances.txt.gz"\> this link\</a\> \</p\> >>"$html"
+ else
+-    echo \<p\> Final significance values \(p-values, q-values\) after specified number of refinement steps can be downloaded from \<a href=$output/$libName.spline_pass$noOfPasses.significances.txt.gz\> this link\</a\> \</p\> >>$html
++    echo \<p\> Final significance values \(p-values, q-values\) after specified number of refinement steps can be downloaded from \<a href="$output"/$libName.spline_pass$noOfPasses.significances.txt.gz\> this link\</a\> \</p\> >>"$html"
+ fi
+ 
+-echo \</br\> >>$html
++echo \</br\> >>"$html"
+ if [[ $noOfPasses -gt 1 ]]; then
+-	echo \<p\> \<h3\> Comparison of spline fits and number of significant contacts from the first and the last spline fit iteration. \</h3\>\</p\> >>$html
+-
+-	echo \<table  border=\"0\"\> >> $html
+-	echo \<tbody\> >> $html
+-	echo \<tr\> >> $html
+-	echo \<th scope=\"col\"\> Spline fits \</th\> >> $html
+-	echo \<th scope=\"col\"\> Number of significant contacts \</th\> >> $html
+-	echo \</tr\> >> $html
+-
+-	echo \<tr\> >> $html
+-	png=$output/$libName.spline_comparison.png
+-    img=$( base64 $png )
+-	echo "<td> <a href=\"$png\"><img src=\"data:image/png;base64,$img\" width=500> </a></td>" >> $html
+-	#echo \<td\> \<a href=\"$png\"\>\<img src=\"$png\" width=500\> \</a\>\</td\> >> $html
+-	png=$output/$libName.spline_FDR_comparison.png
+-    img=$( base64 $png )
+-	echo "<td> <a href=\"$png\"><img src=\"data:image/png;base64,$img\" width=500> </a></td>" >> $html
+-	echo \</tr\> >> $html
+-	echo \</tbody\>\</table\> >> $html
++	echo \<p\> \<h3\> Comparison of spline fits and number of significant contacts from the first and the last spline fit iteration. \</h3\>\</p\> >>"$html"
++
++	echo \<table  border=\"0\"\> >> "$html"
++	echo \<tbody\> >> "$html"
++	echo \<tr\> >> "$html"
++	echo \<th scope=\"col\"\> Spline fits \</th\> >> "$html"
++	echo \<th scope=\"col\"\> Number of significant contacts \</th\> >> "$html"
++	echo \</tr\> >> "$html"
++
++	echo \<tr\> >> "$html"
++	png="$output"/$libName.spline_comparison.png
++    img=$( base64 "$png" )
++	echo "<td> <a href=\"$png\"><img src=\"data:image/png;base64,$img\" width=500> </a></td>" >> "$html"
++	#echo \<td\> \<a href=\"$png\"\>\<img src=\"$png\" width=500\> \</a\>\</td\> >> "$html"
++	png="$output"/$libName.spline_FDR_comparison.png
++    img=$( base64 "$png" )
++	echo "<td> <a href=\"$png\"><img src=\"data:image/png;base64,$img\" width=500> </a></td>" >> "$html"
++	echo \</tr\> >> "$html"
++	echo \</tbody\>\</table\> >> "$html"
+ fi
+ 
+-echo \</br\> >>$html
+-echo \<p\> \<h3\> Relevant figures and text files listed separately for each pass of the spline fit. \</h3\>\</p\> >>$html
+-echo \<table  border=\"1\"\> >> $html
+-echo \<tbody\> >> $html
+-echo \<tr\> >> $html
+-echo \<th scope=\"col\"\> Spline Pass \</th\> >> $html
+-echo \<th scope=\"col\"\> Spline Fit \</th\> >> $html
+-echo \<th scope=\"col\"\> Number of significant contacts \</th\> >> $html
+-echo \</tr\> >> $html
++echo \</br\> >>"$html"
++echo \<p\> \<h3\> Relevant figures and text files listed separately for each pass of the spline fit. \</h3\>\</p\> >>"$html"
++echo \<table  border=\"1\"\> >> "$html"
++echo \<tbody\> >> "$html"
++echo \<tr\> >> "$html"
++echo \<th scope=\"col\"\> Spline Pass \</th\> >> "$html"
++echo \<th scope=\"col\"\> Spline Fit \</th\> >> "$html"
++echo \<th scope=\"col\"\> Number of significant contacts \</th\> >> "$html"
++echo \</tr\> >> "$html"
+ for p in `seq 1 $noOfPasses`; do
+ 
+-	echo \<tr\> >> $html
+-	echo \<td\> Pass $p \</td\> >> $html
+-	png=$output/$libName.spline_pass$p.png
+-    img=$( base64 $output/$libName.spline_pass$p.png )
+-	echo "<td> <a href=\"$png\"><img src=\"data:image/png;base64,$img\" width=450> </a></td>" >> $html
+-	png=$output/$libName.spline_pass$p.qplot.png
+-    img=$( base64 $output/$libName.spline_pass$p.qplot.png )
+-	echo "<td> <a href="$png"><img src=\"data:image/png;base64,$img\" width=450> </a></td>" >> $html
+-	echo \</tr\> >> $html
+-	
+-	echo \<tr\> >> $html
+-	echo \<td\> Pass $p \</td\> >> $html
++	echo \<tr\> >> "$html"
++	echo \<td\> Pass $p \</td\> >> "$html"
++	png="$output"/$libName.spline_pass$p.png
++    img=$( base64 "$output"/$libName.spline_pass$p.png )
++	echo "<td> <a href=\"$png\"><img src=\"data:image/png;base64,$img\" width=450> </a></td>" >> "$html"
++	png="$output"/$libName.spline_pass$p.qplot.png
++    img=$( base64 "$output"/$libName.spline_pass$p.qplot.png )
++	echo "<td> <a href="$png"><img src=\"data:image/png;base64,$img\" width=450> </a></td>" >> "$html"
++	echo \</tr\> >> "$html"
++
++	echo \<tr\> >> "$html"
++	echo \<td\> Pass $p \</td\> >> "$html"
+     if [[ $resolution_used =~ .*res.* ]]; then
+-        txt=$output/$libName.fithic_pass$p.$resolution_used.txt
+-        echo \<td\> \<a href=\"$txt\"\> Equal occupancy bin statistics \</a\>\</td\> >> $html
+-        png=$output/$libName.spline_pass$p.$resolution_used.significances.txt.gz
+-        echo \<td\> \<a href=\"$png\"\> Significance estimates \(p-, q-values\) [gzipped] \</a\>\</td\> >> $html
+-        echo \</tr\> >> $html
++        txt="$output"/$libName.fithic_pass$p.$resolution_used.txt
++        echo \<td\> \<a href=\"$txt\"\> Equal occupancy bin statistics \</a\>\</td\> >> "$html"
++        png="$output"/$libName.spline_pass$p.$resolution_used.significances.txt.gz
++        echo \<td\> \<a href=\"$png\"\> Significance estimates \(p-, q-values\) [gzipped] \</a\>\</td\> >> "$html"
++        echo \</tr\> >> "$html"
+     else
+-        txt=$output/$libName.fithic_pass$p.txt
+-        echo \<td\> \<a href=\"$txt\"\> Equal occupancy bin statistics \</a\>\</td\> >> $html
+-        png=$output/$libName.spline_pass$p.significances.txt.gz
+-        echo \<td\> \<a href=\"$png\"\> Significance estimates \(p-, q-values\) [gzipped] \</a\>\</td\> >> $html
+-        echo \</tr\> >> $html
++        txt="$output"/$libName.fithic_pass$p.txt
++        echo \<td\> \<a href=\"$txt\"\> Equal occupancy bin statistics \</a\>\</td\> >> "$html"
++        png="$output"/$libName.spline_pass$p.significances.txt.gz
++        echo \<td\> \<a href=\"$png\"\> Significance estimates \(p-, q-values\) [gzipped] \</a\>\</td\> >> "$html"
++        echo \</tr\> >> "$html"
+     fi
+-	echo \<tr\> \</tr\> >> $html
+-	echo \<tr\> \</tr\> >> $html
++	echo \<tr\> \</tr\> >> "$html"
++	echo \<tr\> \</tr\> >> "$html"
+ done
+- echo \</tbody\>\</table\> >> $html
+- echo \</body\>\</html\> >> $html
++ echo \</tbody\>\</table\> >> "$html"
++ echo \</body\>\</html\> >> "$html"
+ 
+ 
+diff --git a/fithic/utils/merge-filter-parallelized.sh b/fithic/utils/merge-filter-parallelized.sh
+old mode 100644
+new mode 100755
+index 32070e6..8690124
+--- a/fithic/utils/merge-filter-parallelized.sh
++++ b/fithic/utils/merge-filter-parallelized.sh
+@@ -2,29 +2,33 @@
+ 
+ #DESCRIPTION:
+ #bash merge-filter_parallelized.sh [inputFile] [resolution] [outputDirectory] [fdr]
+-#        
++#
+ #        [inputFile]                Input file of Fit-Hi-C significant interactions
+ #        [resolution]               Resolution used
+ #        [outputDirectory]          Output directory to dump output to
+ #        [fdr]                      False Discovery rate to use when subsetting interactions
+ #        [utilityfolder]            Directory of the Fit-Hi-C utility folder
+ 
+-inputFile=$1
++inputFile="$1"
+ resolution=$2
+ outdir=$3
+ fdr=$4
+ UTILITYFOLDER=$5
+ 
+ #JOBHEADER_FILE="~/bin/jobHeader"
+-script=""$UTILITYFOLDER"CombineNearbyInteraction.py"
+-mkdir -p $outdir
+-zcat $inputFile | cut -f1 | sort | uniq > $outdir/chromosomes.used
++script="${UTILITYFOLDER}/CombineNearbyInteraction.py"
++mkdir -p "$outdir"
++zcat "$inputFile" | cut -f1 | sort | uniq > "${outdir}/chromosomes.used"
+ while read chrom; do
+-    mkdir -p $outdir/$chrom
+-    zcat $inputFile | awk '{if(NR!=1){print $0}}'| awk -v c="$chrom" '{if($1==c && $3==c){print $0}}' | awk -v q="$fdr" '{if($7<=q){print $0}}' | gzip > $outdir/$chrom/subset_fithic_"$chrom".gz
+-    jobFile=$outdir/$chrom/fithic_"$chrom".job 
++    mkdir -p "${outdir}/${chrom}"
++    zcat "${inputFile}" \
++        | awk '{if(NR!=1){print $0}}' \
++        | awk -v c="$chrom" '{if($1==c && $3==c){print $0}}' \
++        | awk -v q="$fdr" '{if($7<=q){print $0}}'\
++        | gzip > "${outdir}/${chrom}/subset_fithic_${chrom}.gz"
++    jobFile="${outdir}/${chrom}/fithic_${chrom}.job"
+     #cat $JOBHEADER_FILE > $jobFile
+-    echo "python3 $script -i $outdir/$chrom/subset_fithic_"$chrom".gz -H 0 -r $resolution -o $outdir/$chrom/postmerged_fithic_"$chrom".gz" >> $jobFile
++    echo "python3 $script -i $outdir/$chrom/subset_fithic_${chrom}.gz -H 0 -r $resolution -o ${outdir}/${chrom}/postmerged_fithic_${chrom}.gz" >> "$jobFile"
+     #qsub $jobFile
+-done <$outdir/chromosomes.used
++done < "${outdir}/chromosomes.used"
+ rm $outdir/chromosomes.used
+diff --git a/fithic/utils/merge-filter.sh b/fithic/utils/merge-filter.sh
+old mode 100644
+new mode 100755
+index 1238b38..9ac2a9f
+--- a/fithic/utils/merge-filter.sh
++++ b/fithic/utils/merge-filter.sh
+@@ -13,11 +13,15 @@ inputFile=$1
+ resolution=$2
+ outputFile=$3
+ fdr=$4
+-utilityfolder=$5
++UTILITYFOLDER=$5
+ 
+ JOBHEADER_FILE="~/bin/jobHeader"
+-script=""$UTILITYFOLDER"CombineNearbyInteraction.py"
+-outdir=$(dirname "${outputFile}")
+-mkdir -p $outdir
+-zcat $inputFile | awk '{if(NR!=1){print $0}}'| awk -v q="$fdr" '{if($7<=q){print $0}}' | gzip > $outdir/fithic_subset.gz
+-python3 $script -i $outdir/fithic_subset.gz -H 0 -r $resolution -o $outputFile
++script="${UTILITYFOLDER}/CombineNearbyInteraction.py"
++outdir="$(dirname "${outputFile}")"
++mkdir -p "$outdir"
++zcat "$inputFile" \
++    | awk '{if(NR!=1){print $0}}' \
++    | awk -v q="$fdr" '{if($7<=q){print $0}}' \
++    | gzip > "${outdir}/fithic_subset.gz"
++
++python3 "${script}" -i "${outdir}/fithic_subset.gz" -H 0 -r "$resolution" -o "$outputFile"
+diff --git a/fithic/utils/visualize-UCSC.sh b/fithic/utils/visualize-UCSC.sh
+old mode 100644
+new mode 100755
+-- 
+2.17.1
+
